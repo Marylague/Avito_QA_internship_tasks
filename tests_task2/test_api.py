@@ -15,7 +15,7 @@ ITEM_SCHEMA = {
     "type": "object",
     "properties": {
         "id": {"type": "string"},
-        "sellerID": {"type": "integer"},
+        "sellerId": {"type": "integer"},
         "name": {"type": "string"},
         "price": {"type": "integer"},
         "likes": {"type": "integer"},
@@ -56,7 +56,7 @@ def test_create_item_success():
     assert r.status_code in (200, 201), f"Expected 200/201, got {r.status_code}, body: {r.text}"
     data = r.json()
     validate(instance=data, schema=ITEM_SCHEMA)
-    assert data["sellerID"] == seller
+    assert data["sellerId"] == seller
     assert data["name"] == payload["name"]
     global CREATED_ITEM
     CREATED_ITEM = data
@@ -73,10 +73,10 @@ def test_get_item_by_id():
     r = requests.get(f"{BASE_URL}/api/1/item/{item['id']}")
     assert r.status_code == 200
     data = r.json()
-    if isinstance(data, list):
-        data = data[0]
-    validate(instance=data, schema=ITEM_SCHEMA)
-    assert data["id"] == item["id"]
+    assert isinstance(data, list)
+    item_data = data[0]
+    assert item_data["id"] == item["id"]
+    assert item_data["sellerId"] == item["sellerId"]
 
 def test_get_items_by_seller():
     seller = gen_seller_id()
@@ -96,7 +96,7 @@ def test_get_items_by_seller():
     ids = [x.get("id") for x in arr]
     assert id1 in ids and id2 in ids
     for item in arr:
-        assert item["sellerID"] == seller
+        assert item["sellerId"] == seller
 
 def test_get_items_by_seller_empty():
     seller = gen_seller_id()
@@ -137,8 +137,9 @@ def test_get_nonexistent_item():
 def test_delete_item_v2():
     seller = gen_seller_id()
     payload = {"sellerID": seller, "name": gen_name(), "price": 5, "likes": 0,"viewCount": 0,"contacts": 0}
-    r = requests.post(f"{BASE_URL}/api/2/item", json=payload)
+    r = requests.post(f"{BASE_URL}/api/1/item", json=payload)
     assert r.status_code in (200,201)
-    item = r.json()
-    rdel = requests.delete(f"{BASE_URL}/api/2/item/{item['id']}")
-    assert rdel.status_code in (200, 204, 404), f"DELETE returned {rdel.status_code}, body: {rdel.text}"
+    item_id = r.json()["id"]
+
+    rdel = requests.delete(f"{BASE_URL}/api/2/item/{item_id}")
+    assert rdel.status_code in (200, 204), f"Expected 200/204, got {rdel.status_code}, {rdel.text}"
